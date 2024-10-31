@@ -1,0 +1,282 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+# Cargar la librería necesaria
+library(readr)
+
+# Cargar los datos del archivo CSV
+ruta_archivo <- "C:/tarea3/MIGRACION_BDP.csv"
+datos <- read_csv(ruta_archivo)
+
+
+```
+
+```{r}
+# Instalar dplyr si aún no lo tienes instalado
+install.packages("dplyr")
+
+# Cargar la librería
+library(dplyr)
+
+```
+```{r}
+library(dplyr)
+library(arules)
+
+
+```
+
+
+```{r}
+# Asegúrate de que el dataset esté correctamente cargado como data.frame
+datos_fp <- as.data.frame(datos)
+
+# Verifica la estructura del dataset
+str(datos_fp)
+
+# Muestra las primeras filas para asegurarte de que todo esté en orden
+head(datos_fp)
+
+
+
+```
+
+
+```{r}
+# Selección de columnas y conversión a factores
+datos_fp <- datos_fp %>%
+  select(DEPARTAMENTO, MUNICIPIO, ZONA, PEI3) %>%
+  mutate(
+    DEPARTAMENTO = as.factor(DEPARTAMENTO),
+    MUNICIPIO = as.factor(MUNICIPIO),
+    ZONA = as.factor(ZONA),
+    PEI3 = as.factor(PEI3)
+  )
+
+```
+
+```{r}
+# Cargar nuevamente la librería arules para asegurarnos que esté disponible
+library(arules)
+
+# Convertir el data.frame a una clase de transacciones usando directamente el método adecuado
+transacciones <- as(datos_fp, "transactions")
+
+# Verifica la estructura de las transacciones
+summary(transacciones)
+
+
+```
+
+
+```{r}
+# Aplicar el algoritmo Apriori
+reglas <- apriori(
+  transacciones,
+  parameter = list(supp = 0.01, conf = 0.8)
+)
+
+# Mostrar las reglas encontradas
+inspect(head(sort(reglas, by = "confidence"), 10))
+
+```
+```{r}
+library(dplyr)
+library(ggplot2)
+library(arules)
+library(arulesViz)
+
+# Cargar datos
+#datos <- read.csv("ruta/del/archivo/MIGRACION_BDP.csv")
+
+# Filtrar las variables de interés
+datos_filtered <- datos %>% select(DEPARTAMENTO, MUNICIPIO, ZONA, PEI3, PEI4)
+
+```
+
+
+```{r}
+# Agrupar por DEPARTAMENTO y ZONA, contar migrantes
+migracion_zonas <- datos_filtered %>%
+  group_by(DEPARTAMENTO, ZONA) %>%
+  summarise(TotalMigrantes = n())
+
+# Gráfico de barras por ZONA
+ggplot(migracion_zonas, aes(x = factor(ZONA), y = TotalMigrantes, fill = factor(DEPARTAMENTO))) +
+  geom_bar(stat = "identity") +
+  labs(title = "Migración por Zonas y Departamento",
+       x = "Zona",
+       y = "Número de Migrantes") +
+  theme_minimal()
+
+```
+
+
+```{r}
+# Crear rangos de edad
+datos_filtered <- datos_filtered %>%
+  mutate(RangoEdad = case_when(
+    PEI4 < 18 ~ "Menores de 18",
+    PEI4 >= 18 & PEI4 <= 30 ~ "18-30",
+    PEI4 >= 31 & PEI4 <= 50 ~ "31-50",
+    PEI4 > 50 ~ "Mayores de 50"
+  ))
+
+# Agrupar por rango de edad
+migracion_edades <- datos_filtered %>%
+  group_by(RangoEdad) %>%
+  summarise(TotalMigrantes = n())
+
+# Gráfico por grupo etario
+ggplot(migracion_edades, aes(x = RangoEdad, y = TotalMigrantes, fill = RangoEdad)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Migración por Grupo Etario",
+       x = "Grupo de Edad",
+       y = "Número de Migrantes") +
+  theme_minimal()
+
+```
+```{r}
+# Asegúrate de que los paquetes necesarios están cargados
+library(dplyr)
+library(arules)
+
+# Convertir el dataset a un formato simple (data.frame) y eliminar valores NA si existen
+datos_menores30 <- as.data.frame(datos_menores30)
+datos_menores30 <- na.omit(datos_menores30)
+
+# Convertir las columnas a factores para que puedan ser procesadas correctamente
+datos_menores30[] <- lapply(datos_menores30, factor)
+
+# Convertir el data.frame a transacciones usando arules
+transacciones_menores30 <- as(datos_menores30, "transactions")
+
+# Verificar la estructura de las transacciones
+summary(transacciones_menores30)
+
+
+```
+
+
+```{r}
+# Ejecutar el algoritmo Apriori para menores de 30 años
+reglas_menores30 <- apriori(transacciones_menores30, parameter = list(supp = 0.01, conf = 0.8))
+
+# Mostrar las reglas interesantes
+inspect(head(sort(reglas_menores30, by = "lift"), 10))
+
+```
+
+```{r}
+# Cargar las librerías necesarias
+library(dplyr)
+library(ggplot2)
+
+# Contar la frecuencia de migraciones por año
+migraciones_por_ano <- datos %>%
+  group_by(PEI5) %>%
+  summarise(total_migraciones = n()) %>%
+  arrange(desc(total_migraciones))
+
+# Mostrar el año con más migraciones
+ano_max_migraciones <- migraciones_por_ano[which.max(migraciones_por_ano$total_migraciones), ]
+print(ano_max_migraciones)
+
+# Visualizar los resultados con un gráfico
+ggplot(migraciones_por_ano, aes(x = as.factor(PEI5), y = total_migraciones)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(title = "Migraciones por Año", x = "Año de Migración", y = "Cantidad de Migraciones") +
+  theme_minimal()
+
+```
+
+```{r}
+# Cargar librerías
+library(readr)
+library(readxl)
+library(dplyr)
+library(cluster)
+
+# Cargar los datos
+# Cargar el archivo especificando el delimitador ";"
+data <- read.csv("C:/Users/nestor.gonzalez/Desktop/MASTER GADEX/MAESTRIA USAC/INTRODUCCION A LA MINERIA DE DATOS/Tarea 4/migracion.csv", sep = ";")
+
+# Verificar los nombres de las columnas
+colnames(data)
+
+
+data <- read_csv("C:/Users/nestor.gonzalez/Desktop/MASTER GADEX/MAESTRIA USAC/INTRODUCCION A LA MINERIA DE DATOS/Tarea 4/migracion.csv", delim= ";")
+diccionario <- read_excel("C:/Users/nestor.gonzalez/Desktop/MASTER GADEX/MAESTRIA USAC/INTRODUCCION A LA MINERIA DE DATOS/Tarea 4/diccionario_migracion.xlsx")
+
+# Visualizar las primeras filas
+head(data)
+head(diccionario)
+
+
+```
+```{r}
+# Convertir variables categóricas a numéricas
+data$DEPARTAMENTO <- as.numeric(as.factor(data$DEPARTAMENTO))
+data$MUNICIPIO <- as.numeric(as.factor(data$MUNICIPIO))
+data$PEI4 <- as.numeric(as.factor(data$PEI4))  # Supuesto: PEI4 = género
+
+# Seleccionar variables y aplicar K-means
+datos_clustering <- data %>% select(DEPARTAMENTO, MUNICIPIO, PEI4, PEI3)  # Supuesto: PEI3 = edad
+set.seed(123)
+kmeans_model <- kmeans(datos_clustering, centers = 4)
+data$cluster <- kmeans_model$cluster
+
+```
+
+
+```{r}
+# Seleccionar las variables para K-means
+datos_clustering <- data %>% select(DEPARTAMENTO, MUNICIPIO, PEI4, PEI3)
+
+# Aplicar K-means
+set.seed(123)
+kmeans_model <- kmeans(datos_clustering, centers = 4)
+data$cluster <- kmeans_model$cluster
+
+
+```
+
+
+```{r}
+# Calcular la media de cada variable por cluster
+resumen_clusters <- data %>%
+  group_by(cluster) %>%
+  summarise(across(everything(), mean))
+
+print(resumen_clusters)
+
+```
+```{r}
+data$PEI3 <- as.numeric(data$PEI3)
+
+```
+
+```{r}
+data <- data[!is.na(data$PEI3), ]
+
+```
+
+
+```{r}
+data$edad_rango <- cut(data$PEI3, breaks = seq(0, max(data$PEI3), by = 5), right = FALSE)
+
+```
+
+
+```{r}
+summary(data$PEI3)
+
+```
+
